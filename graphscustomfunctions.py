@@ -739,3 +739,133 @@ def plot_odds_ratios(
     plt.xlim(xlim)
     plt.tight_layout()
     plt.show()
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Optional, Tuple, List
+
+
+def plot_model_f2_scores(
+    models: List[str],
+    scores: List[float],
+    title: Optional[str] = "F2 Scores of Trained Models",
+    ylabel: Optional[str] = "F2 Score (Class 1)",
+    ylim: Optional[Tuple[float, float]] = (0.2, 0.6),
+) -> None:
+    """
+    Plot a sorted bar chart of F2 Scores for different models.
+
+    Args:
+        models (List[str]): List of model names.
+        scores (List[float]): Corresponding list of F2 scores.
+        title (Optional[str]): Title of the plot.
+        ylabel (Optional[str]): Label for the y-axis.
+        ylim (Optional[Tuple[float, float]]): Limits for the y-axis.
+    """
+    df = pd.DataFrame({"Model": models, "F2 Score": scores})
+    df_sorted = df.sort_values(by="F2 Score", ascending=False)
+
+    plt.figure(figsize=(10, 6))
+    ax = sns.barplot(
+        x="Model",
+        y="F2 Score",
+        data=df_sorted,
+        palette="magma",
+        hue="Model",
+        legend=False,
+    )
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+    plt.title(title, fontsize=16, fontweight="bold")
+    plt.xlabel("Model", fontsize=12)
+    plt.ylabel(ylabel, fontsize=12)
+    if ylim:
+        plt.ylim(*ylim)
+    plt.xticks(rotation=45, ha="right")
+
+    for p in ax.patches:
+        ax.annotate(
+            f"{p.get_height():.4f}",
+            (p.get_x() + p.get_width() / 2.0, p.get_height()),
+            ha="center",
+            va="center",
+            xytext=(0, 10),
+            textcoords="offset points",
+            color="black",
+            fontsize=10,
+        )
+
+    plt.tight_layout()
+    plt.show()
+
+
+from typing import List, Optional, Tuple
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+def plot_model_cv_f1_comparison(
+    models: List[str],
+    f1_macro_scores: List[float],
+    f2_scores: List[float],
+    title: Optional[str] = "CV Results of F1 Macro and F2 Scores by Model",
+    xlabel: Optional[str] = "Score",
+    xlim: Optional[Tuple[float, float]] = (0.0, 1.0),
+) -> None:
+    """
+    Plot side-by-side barplots comparing F1 Macro and F2 scores for multiple models.
+
+    Args:
+        models (List[str]): List of model names.
+        f1_macro_scores (List[float]): List of F1 Macro scores.
+        f2_scores (List[float]): List of F2 scores.
+        title (Optional[str]): Plot title.
+        xlabel (Optional[str]): Label for the x-axis.
+        xlim (Optional[Tuple[float, float]]): Limits for the x-axis.
+    """
+    data = {
+        "Model": models * 2,
+        "Metric": ["F1 Macro"] * len(models) + ["F2 Score"] * len(models),
+        "Score": f1_macro_scores + f2_scores,
+    }
+    df = pd.DataFrame(data)
+
+    plt.figure(figsize=(12, 8))
+    ax = sns.barplot(
+        y="Model",
+        x="Score",
+        hue="Metric",
+        data=df,
+        palette="magma",
+    )
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+    plt.title(title, fontsize=16, fontweight="bold")
+    plt.xlabel(xlabel, fontsize=12)
+    plt.ylabel("Model", fontsize=12)
+    if xlim:
+        plt.xlim(*xlim)
+    plt.grid(axis="x", linestyle="--", alpha=0.7)
+
+    for p in ax.patches:
+        width = p.get_width()
+        if width > 0.01:
+            ax.annotate(
+                f"{width:.4f}",
+                (width + 0.01, p.get_y() + p.get_height() / 2),
+                ha="left",
+                va="center",
+                fontsize=9,
+                color="black",
+            )
+
+    plt.legend(title="Metric")
+    plt.tight_layout()
+    plt.show()

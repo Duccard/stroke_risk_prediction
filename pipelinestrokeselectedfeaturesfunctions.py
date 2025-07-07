@@ -160,6 +160,26 @@ def pipeline_stroke_selected_features(estimator, undersample=True, random_state=
     return ImbPipeline(steps)
 
 
+def pipeline_stroke_selected_features_ratio_2_to_1(
+    estimator, undersample=True, random_state=42
+):
+    steps = [
+        ("feature_engineering", CombinedFeatureTransformer()),
+        ("final_preprocessing", perfect_data_preprocessor_selected),
+    ]
+
+    if undersample:
+        steps.append(
+            (
+                "undersampler",
+                RandomUnderSampler(sampling_strategy=0.5, random_state=random_state),
+            )
+        )
+
+    steps.append(("classifier", estimator))
+    return ImbPipeline(steps)
+
+
 def pipeline_stroke_selected_features_smote_tomek(
     estimator, undersample=True, random_state=42
 ):

@@ -830,3 +830,344 @@ def cross_validate_catboost(
         print(
             f"{metric.replace('_', ' ').title()}: Mean = {scores.mean():.4f}, Std = {scores.std():.4f}"
         )
+
+
+import warnings
+import sys
+import os
+from contextlib import redirect_stderr
+from typing import Any, Dict
+
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    make_scorer,
+    precision_score,
+    recall_score,
+    f1_score,
+    fbeta_score,
+)
+
+
+def tune_logistic_regression_rs(
+    X: Any,
+    y: Any,
+    pipeline_function: Any,
+    param_distributions: Dict[str, Any],
+    undersample: bool = False,
+    n_iter: int = 30,
+    cv_folds: int = 5,
+    random_state: int = 42,
+) -> Any:
+    """
+    Runs RandomizedSearchCV on a pipeline with LogisticRegression.
+    Returns the best estimator and prints best params and cross-validation scores.
+    """
+
+    from sklearn.metrics import fbeta_score
+
+    def fbeta_class1(y_true, y_pred, beta=2):
+        return fbeta_score(y_true, y_pred, beta=beta, pos_label=1, zero_division=0)
+
+    lr_classifier = LogisticRegression(random_state=random_state, max_iter=1000)
+
+    pipeline = pipeline_function(
+        estimator=lr_classifier, undersample=undersample, random_state=random_state
+    )
+
+    cv_strategy = StratifiedKFold(
+        n_splits=cv_folds, shuffle=True, random_state=random_state
+    )
+
+    scoring = {
+        "f1_macro": "f1_macro",
+        "f1_class_1": make_scorer(f1_score, pos_label=1, zero_division=0),
+        "f2_class_1": make_scorer(fbeta_class1),
+        "recall_class_1": make_scorer(recall_score, pos_label=1, zero_division=0),
+        "precision_class_1": make_scorer(precision_score, pos_label=1, zero_division=0),
+    }
+
+    print("\n============================")
+    print(f"PIPELINE FUNCTION: {pipeline_function.__name__}")
+    print(f"UNDERSAMPLING: {undersample}")
+    print("============================\n")
+    print(f"Performing RandomizedSearchCV with {n_iter} iterations...")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with open(os.devnull, "w") as devnull, redirect_stderr(devnull):
+            random_search = RandomizedSearchCV(
+                estimator=pipeline,
+                param_distributions=param_distributions,
+                n_iter=n_iter,
+                scoring=scoring,
+                refit="f1_macro",
+                cv=cv_strategy,
+                verbose=0,
+                n_jobs=-1,
+                random_state=random_state,
+                return_train_score=False,
+            )
+            random_search.fit(X, y)
+
+    print("\nRandomizedSearchCV complete.")
+    print("\nBest Parameters Found:")
+    print(random_search.best_params_)
+
+    best_index = random_search.best_index_
+    cv_results = random_search.cv_results_
+
+    print("\n--- Best Cross-Validation Scores ---")
+    print(f"F1 Macro Score: {cv_results['mean_test_f1_macro'][best_index]:.4f}")
+    print(f"F1 Class 1 Score: {cv_results['mean_test_f1_class_1'][best_index]:.4f}")
+    print(f"F2 Class 1 Score: {cv_results['mean_test_f2_class_1'][best_index]:.4f}")
+    print(f"Recall (Class 1): {cv_results['mean_test_recall_class_1'][best_index]:.4f}")
+    print(
+        f"Precision (Class 1): {cv_results['mean_test_precision_class_1'][best_index]:.4f}"
+    )
+
+    return random_search.best_estimator_
+
+
+from sklearn.ensemble import RandomForestClassifier
+import optuna
+import warnings
+import os
+from contextlib import redirect_stderr
+from sklearn.model_selection import cross_validate, StratifiedKFold
+from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
+from sklearn.exceptions import ConvergenceWarning
+
+
+def tune_model_optuna_with_grid_rf(
+    X,
+    y,
+    pipeline_function,
+    model_class,
+    param_distributions,
+    n_trials=30,
+    cv_folds=5,
+    undersample=False,
+    random_state=42,
+):
+
+    def fbeta_class1(y_true, y_pred, beta=2):
+        from sklearn.metrics import fbeta_score
+
+        return fbeta_score(y_true, y_pred, beta=beta, pos_label=1, zero_division=0)
+
+    def objective(trial):
+        hyperparams = {}
+        for param, values in param_distributions.items():
+            if isinstance(values[0], float):
+                # Continuous hyperparameters
+                low, high = min(values), max(values)
+                hyperparams[param] = trial.suggest_float(param, low, high)
+            elif isinstance(values[0], int):
+                # Integer hyperparameters
+                low, high = min(values), max(values)
+                hyperparams[param] = trial.suggest_int(param, low, high)
+            else:
+                # Categorical
+                hyperparams[param] = trial.suggest_categorical(param, values)
+
+        estimator = model_class(**hyperparams, random_state=random_state, n_jobs=-1)
+
+        pipeline = pipeline_function(
+            estimator=estimator, undersample=undersample, random_state=random_state
+        )
+
+        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
+
+        scoring = {
+            "f1_macro": make_scorer(f1_score, average="macro", zero_division=0),
+            "f1_class_1": make_scorer(f1_score, pos_label=1, zero_division=0),
+            "f2_class_1": make_scorer(fbeta_class1),
+            "recall_class_1": make_scorer(recall_score, zero_division=0),
+            "precision_class_1": make_scorer(precision_score, zero_division=0),
+        }
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            with open(os.devnull, "w") as devnull, redirect_stderr(devnull):
+                scores = cross_validate(
+                    pipeline,
+                    X,
+                    y,
+                    scoring=scoring,
+                    cv=cv,
+                    n_jobs=-1,
+                    return_train_score=False,
+                )
+
+        mean_f1 = scores["test_f1_macro"].mean()
+
+        trial.set_user_attr("f1_class_1", scores["test_f1_class_1"].mean())
+        trial.set_user_attr("f2_class_1", scores["test_f2_class_1"].mean())
+        trial.set_user_attr("recall_class_1", scores["test_recall_class_1"].mean())
+        trial.set_user_attr(
+            "precision_class_1", scores["test_precision_class_1"].mean()
+        )
+
+        return 1.0 - mean_f1
+
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=random_state)
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+
+    print("\nOptuna optimization complete.")
+    print(f"Best trial: {study.best_trial.number}")
+    print(f"Best F1 Macro Score: {1.0 - study.best_value:.4f}")
+    print("Best hyperparameters:")
+    for k, v in study.best_trial.params.items():
+        print(f"  {k}: {v}")
+
+    print("\nOther metrics on best trial:")
+    print(f"F1 Class 1: {study.best_trial.user_attrs['f1_class_1']:.4f}")
+    print(f"F2 Class 1: {study.best_trial.user_attrs['f2_class_1']:.4f}")
+    print(f"Recall (Class 1): {study.best_trial.user_attrs['recall_class_1']:.4f}")
+    print(
+        f"Precision (Class 1): {study.best_trial.user_attrs['precision_class_1']:.4f}"
+    )
+
+    best_params = study.best_trial.params
+    best_estimator = model_class(**best_params, random_state=random_state, n_jobs=-1)
+
+    best_pipeline = pipeline_function(
+        estimator=best_estimator, undersample=undersample, random_state=random_state
+    )
+    best_pipeline.fit(X, y)
+
+    return best_pipeline
+
+
+def tune_model_optuna_with_grid_cb(
+    X,
+    y,
+    pipeline_function,
+    param_distributions,
+    n_trials=30,
+    cv_folds=5,
+    undersample=False,
+    random_state=42,
+):
+    from catboost import CatBoostClassifier
+    import optuna
+    import warnings
+    import os
+    from contextlib import redirect_stderr
+    from sklearn.model_selection import cross_validate, StratifiedKFold
+    from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
+    from sklearn.exceptions import ConvergenceWarning
+
+    def fbeta_class1(y_true, y_pred, beta=2):
+        from sklearn.metrics import fbeta_score
+
+        return fbeta_score(y_true, y_pred, beta=beta, pos_label=1, zero_division=0)
+
+    def objective(trial):
+        hyperparams = {}
+
+        bootstrap_type = trial.suggest_categorical(
+            "bootstrap_type", param_distributions["bootstrap_type"]
+        )
+        hyperparams["bootstrap_type"] = bootstrap_type
+
+        if bootstrap_type == "Bernoulli":
+            subsample_range = param_distributions.get("subsample", [0.5, 0.9])
+            hyperparams["subsample"] = trial.suggest_float(
+                "subsample", min(subsample_range), max(subsample_range)
+            )
+
+        for param, values in param_distributions.items():
+            if param in ["bootstrap_type", "subsample"]:
+                continue
+            if isinstance(values[0], float):
+                low, high = min(values), max(values)
+                hyperparams[param] = trial.suggest_float(param, low, high)
+            elif isinstance(values[0], int):
+                low, high = min(values), max(values)
+                hyperparams[param] = trial.suggest_int(param, low, high)
+            else:
+                hyperparams[param] = trial.suggest_categorical(param, values)
+
+        hyperparams["random_state"] = random_state
+        hyperparams["verbose"] = 0
+
+        estimator = CatBoostClassifier(**hyperparams)
+
+        pipeline = pipeline_function(
+            estimator=estimator, undersample=undersample, random_state=random_state
+        )
+
+        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
+
+        scoring = {
+            "f1_macro": make_scorer(f1_score, average="macro", zero_division=0),
+            "f1_class_1": make_scorer(f1_score, pos_label=1, zero_division=0),
+            "f2_class_1": make_scorer(fbeta_class1),
+            "recall_class_1": make_scorer(recall_score, zero_division=0),
+            "precision_class_1": make_scorer(precision_score, zero_division=0),
+        }
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            with open(os.devnull, "w") as devnull, redirect_stderr(devnull):
+                scores = cross_validate(
+                    pipeline,
+                    X,
+                    y,
+                    scoring=scoring,
+                    cv=cv,
+                    n_jobs=-1,
+                    return_train_score=False,
+                )
+
+        mean_f1 = scores["test_f1_macro"].mean()
+
+        trial.set_user_attr("f1_class_1", scores["test_f1_class_1"].mean())
+        trial.set_user_attr("f2_class_1", scores["test_f2_class_1"].mean())
+        trial.set_user_attr("recall_class_1", scores["test_recall_class_1"].mean())
+        trial.set_user_attr(
+            "precision_class_1", scores["test_precision_class_1"].mean()
+        )
+
+        return 1.0 - mean_f1
+
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=random_state)
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+
+    print("\nOptuna optimization complete.")
+    print(f"Best trial: {study.best_trial.number}")
+    print(f"Best F1 Macro Score: {1.0 - study.best_value:.4f}")
+    print("Best hyperparameters:")
+    for k, v in study.best_trial.params.items():
+        print(f"  {k}: {v}")
+
+    print("\nOther metrics on best trial:")
+    print(f"F1 Class 1: {study.best_trial.user_attrs['f1_class_1']:.4f}")
+    print(f"F2 Class 1: {study.best_trial.user_attrs['f2_class_1']:.4f}")
+    print(f"Recall (Class 1): {study.best_trial.user_attrs['recall_class_1']:.4f}")
+    print(
+        f"Precision (Class 1): {study.best_trial.user_attrs['precision_class_1']:.4f}"
+    )
+
+    best_params = study.best_trial.params
+    best_params["random_state"] = random_state
+    best_params["verbose"] = 0
+    best_estimator = CatBoostClassifier(**best_params)
+
+    best_pipeline = pipeline_function(
+        estimator=best_estimator, undersample=undersample, random_state=random_state
+    )
+    best_pipeline.fit(X, y)
+
+    return best_pipeline

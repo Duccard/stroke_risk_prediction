@@ -809,13 +809,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def plot_model_cv_f1_comparison(
+def plot_model_f1_macro_f2_comparison(
     models: List[str],
     f1_macro_scores: List[float],
     f2_scores: List[float],
     title: Optional[str] = "CV Results of F1 Macro and F2 Scores by Model",
     xlabel: Optional[str] = "Score",
-    xlim: Optional[Tuple[float, float]] = (0.0, 1.0),
+    xlim: Optional[Tuple[float, float]] = (0.2, 0.8),
 ) -> None:
     """
     Plot side-by-side barplots comparing F1 Macro and F2 scores for multiple models.

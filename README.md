@@ -54,7 +54,7 @@ The objective is to support early identification of high-risk patients to inform
 
 - Confusion Matrix. Provides detailed breakdown of correct and incorrect predictions.
 
-## Best Mode
+## Best Model
 
 Ensemble model was chosen as best model, was made from of three base/advanced models (LR, RF, CatBoost). On final evaluation it achieved:
 

@@ -38,4 +38,10 @@ The objective is to support early identification of high-risk patients to inform
 
 ## Main Evaluation Metric:
 
-Macro F1 Score. Balances precision and recall across classes to ensure fair assesment of performance on both stroke and non-strokes case in an imbalanced dataset.
+- F2.
+
+- Macro F1 Score. Balances precision and recall across classes to ensure fair assesment of performance on both stroke and non-strokes case in an imbalanced dataset.
+
+- Recall(Class 1).
+
+

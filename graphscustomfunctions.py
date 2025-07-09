@@ -8,6 +8,40 @@ from phik import phik_matrix
 import warnings
 from typing import List, Optional
 import matplotlib.lines as mlines
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score, fbeta_score, precision_score, recall_score
+from typing import Sequence
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    roc_curve,
+    roc_auc_score,
+    precision_recall_curve,
+    average_precision_score,
+)
+from typing import Union
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import List, Optional
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from typing import List, Optional
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+from typing import Optional, Tuple
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def plot_numerical_boxplots(
@@ -263,11 +297,6 @@ def plot_countplots_categorical_by_stroke(
     plt.show()
 
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import List, Optional
-
-
 def plot_stroke_rate_by_category(
     df,
     cat_cols: List[str],
@@ -461,12 +490,6 @@ def plot_stripplot_by_stroke(
     plt.show()
 
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from typing import List, Optional
-
-
 def plot_binary_strip_and_countplot_rate(
     df: pd.DataFrame,
     binary_cols: List[str],
@@ -626,13 +649,6 @@ def plot_phik_heatmap(
     plt.show()
 
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import pandas as pd
-from typing import Optional, Tuple
-
-
 def plot_median_differences(
     diff_data: pd.DataFrame,
     hypothesis_col: str = "Hypothesis",
@@ -741,12 +757,6 @@ def plot_odds_ratios(
     plt.show()
 
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Optional, Tuple, List
-
-
 def plot_model_f2_scores(
     models: List[str],
     scores: List[float],
@@ -801,12 +811,6 @@ def plot_model_f2_scores(
 
     plt.tight_layout()
     plt.show()
-
-
-from typing import List, Optional, Tuple
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def plot_model_f1_macro_f2_comparison(
@@ -867,5 +871,177 @@ def plot_model_f1_macro_f2_comparison(
             )
 
     plt.legend(title="Metric")
+    plt.tight_layout()
+    plt.show()
+
+
+def compare_two_models_scores(
+    model_names,
+    f1_macro_scores,
+    f2_scores,
+    recall_scores,
+    precision_scores,
+    title="Comparison of Model Metrics",
+):
+    metrics = ["F1 Macro", "F2 (Class 1)", "Recall (Class 1)", "Precision (Class 1)"]
+
+    model1_values = [
+        f1_macro_scores[0],
+        f2_scores[0],
+        recall_scores[0],
+        precision_scores[0],
+    ]
+    model2_values = [
+        f1_macro_scores[1],
+        f2_scores[1],
+        recall_scores[1],
+        precision_scores[1],
+    ]
+
+    y_pos = np.arange(len(metrics))
+    height = 0.35
+
+    plt.figure(figsize=(10, 6))
+
+    bars1 = plt.barh(
+        y_pos - height / 2,
+        model1_values,
+        height,
+        label=model_names[0],
+        color=plt.cm.magma(0.4),
+    )
+    bars2 = plt.barh(
+        y_pos + height / 2,
+        model2_values,
+        height,
+        label=model_names[1],
+        color=plt.cm.magma(0.7),
+    )
+
+    plt.xlabel("Score", fontsize=12)
+    plt.title(title, fontsize=14, weight="bold")
+    plt.yticks(y_pos, metrics)
+    plt.xlim(0, 1.0)
+    plt.legend()
+    plt.grid(axis="x", linestyle="--", alpha=0.3)
+
+    for bar in bars1:
+        width = bar.get_width()
+        plt.text(
+            width + 0.01,
+            bar.get_y() + bar.get_height() / 2,
+            f"{width:.3f}",
+            va="center",
+            fontsize=10,
+        )
+
+    for bar in bars2:
+        width = bar.get_width()
+        plt.text(
+            width + 0.01,
+            bar.get_y() + bar.get_height() / 2,
+            f"{width:.3f}",
+            va="center",
+            fontsize=10,
+        )
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_threshold_tuning(
+    probs: np.ndarray,
+    y_true: np.ndarray,
+    thresholds: Sequence[float] = np.arange(0.1, 0.9, 0.05),
+    title: str = "Threshold Tuning Metrics",
+) -> None:
+    """
+    Plots F1, F2, Recall, and Precision scores vs. thresholds.
+
+    Parameters:
+    - probs: array-like of shape (n_samples,), predicted probabilities for class 1
+    - y_true: array-like of shape (n_samples,), true binary labels
+    - thresholds: iterable of thresholds to evaluate
+    - title: plot title
+    """
+
+    f1_scores = []
+    f2_scores = []
+    recall_scores = []
+    precision_scores = []
+
+    for t in thresholds:
+        preds = (probs >= t).astype(int)
+        f1_scores.append(f1_score(y_true, preds, zero_division=0))
+        f2_scores.append(fbeta_score(y_true, preds, beta=2, zero_division=0))
+        recall_scores.append(recall_score(y_true, preds, zero_division=0))
+        precision_scores.append(precision_score(y_true, preds, zero_division=0))
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(
+        thresholds, f1_scores, marker="o", color=plt.cm.magma(0.2), label="F1 Macro"
+    )
+    plt.plot(thresholds, f2_scores, marker="s", color=plt.cm.magma(0.4), label="F2")
+    plt.plot(
+        thresholds, recall_scores, marker="^", color=plt.cm.magma(0.6), label="Recall"
+    )
+    plt.plot(
+        thresholds,
+        precision_scores,
+        marker="d",
+        color=plt.cm.magma(0.8),
+        label="Precision",
+    )
+
+    plt.xlabel("Threshold", fontsize=12)
+    plt.ylabel("Score", fontsize=12)
+    plt.title(title, fontsize=16, weight="bold")
+    plt.legend(title="Metrics")
+    plt.grid(True)
+    plt.show()
+
+
+def plot_roc_pr_curves(
+    y_true: Union[np.ndarray, list],
+    y_proba: Union[np.ndarray, list],
+    model_name: str = "Model",
+) -> None:
+    """
+    Plots ROC Curve and Precision-Recall Curve side by side for given true labels and predicted probabilities.
+
+    Parameters:
+    - y_true: array-like of shape (n_samples,), true binary labels
+    - y_proba: array-like of shape (n_samples,), predicted probabilities for class 1
+    - model_name: str, label for the model in plot titles
+    """
+
+    fpr, tpr, _ = roc_curve(y_true, y_proba)
+    roc_auc = roc_auc_score(y_true, y_proba)
+
+    precision, recall, _ = precision_recall_curve(y_true, y_proba)
+    pr_auc = average_precision_score(y_true, y_proba)
+
+    plt.figure(figsize=(14, 6))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(fpr, tpr, color=plt.cm.magma(0.6), lw=2, label=f"AUC = {roc_auc:.4f}")
+    plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+    plt.title(f"ROC Curve - {model_name}", fontsize=14, weight="bold")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.legend(loc="lower right")
+    plt.grid(alpha=0.3)
+
+    plt.subplot(1, 2, 2)
+    plt.plot(
+        recall, precision, color=plt.cm.magma(0.4), lw=2, label=f"PR AUC = {pr_auc:.4f}"
+    )
+    plt.title(f"Precision-Recall Curve - {model_name}", fontsize=14, weight="bold")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.legend(loc="upper right")
+    plt.grid(alpha=0.3)
+
     plt.tight_layout()
     plt.show()

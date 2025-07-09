@@ -38,10 +38,39 @@ The objective is to support early identification of high-risk patients to inform
 
 ## Main Evaluation Metric:
 
-- F2.
+- F2. Similar to F1 score, but it weights recall more heavily than precision.
+
+- Recall (Class 1). Measures how many actual positives the model successfully finds.
 
 - Macro F1 Score. Balances precision and recall across classes to ensure fair assesment of performance on both stroke and non-strokes case in an imbalanced dataset.
 
-- Recall(Class 1).
+## Secondary Evaluation Metric:
+
+- Precision (Class 1). It tells how many of positive predictions were actually correct. 
+
+- ROC AUC. Measures how well a model can distinguish between classes.
+
+- PR AUC. Measures how well a model balances precision and recall across thresholds.
+
+- Confusion Matrix. Provides detailed breakdown of correct and incorrect predictions.
+
+## Best Mode
+
+Ensemble model was chosen as best model, was made from of three base/advanced models (LR, RF, CatBoost). On final evaluation it achieved:
+
+- F2 Score: 0.37
+
+- F1 Macro: 0.56
+
+- Recall(1 Class): 62
+
+- Precision(1 Class): 0.14
+
+- ROC AUC: 0.77
+
+- PR AUC: 0.145
 
 
+Evaluation metrics confirmed strong performance for the majority class and highlighted the challenge of identifying minority stroke cases—an expected difficulty given the data imbalance.
+
+Overall, this ensemble model can serve as a helpful tool to flag high-risk cases, supporting early detection efforts. However, given its tendency for both false positives and missed positives, it should not be relied on as the sole decision-maker. Medical professionals should use its predictions alongside clinical judgment and other diagnostic information to ensure safe and accurate patient care.

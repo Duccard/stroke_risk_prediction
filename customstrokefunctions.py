@@ -50,6 +50,67 @@ from typing import Callable, Any, Optional
 from sklearn.pipeline import Pipeline
 from lightgbm import LGBMClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
+from typing import Callable, Any, Optional
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
+from sklearn.ensemble import RandomForestClassifier
+import optuna
+import warnings
+import os
+from contextlib import redirect_stderr
+from sklearn.model_selection import cross_validate, StratifiedKFold
+from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
+from sklearn.exceptions import ConvergenceWarning
+
+import warnings
+import sys
+import os
+from contextlib import redirect_stderr
+from typing import Callable, Any, Optional
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
+from lightgbm import LGBMClassifier
+
+from typing import Callable, Any, Optional
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
+from xgboost import XGBClassifier
+
+import warnings
+import sys
+import os
+from contextlib import redirect_stderr
+from typing import Callable, Any, Optional
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
+from catboost import CatBoostClassifier
+import warnings
+import sys
+import os
+from contextlib import redirect_stderr
+from typing import Any, Dict
+
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    make_scorer,
+    precision_score,
+    recall_score,
+    f1_score,
+    fbeta_score,
+)
+from catboost import CatBoostClassifier
+import optuna
+import warnings
+import os
+from contextlib import redirect_stderr
+from sklearn.model_selection import cross_validate, StratifiedKFold
+from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
+from sklearn.exceptions import ConvergenceWarning
 
 
 def train_and_evaluate_dummy_classifier(
@@ -72,7 +133,7 @@ def train_and_evaluate_dummy_classifier(
 
     pipeline_model: Pipeline = pipeline_function(
         estimator=dummy_classifier,
-        undersample=False,  # Usually you don't undersample for dummy
+        undersample=False,
     )
 
     print("\n============================")
@@ -459,12 +520,6 @@ def cross_validate_logistic_regression(
         )
 
 
-from typing import Callable, Any, Optional
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
-
-
 def cross_validate_random_forest(
     pipeline_function: Callable[..., Any],
     X: Any,
@@ -540,12 +595,6 @@ def cross_validate_random_forest(
         print(
             f"{metric.replace('_', ' ').title()}: Mean = {scores.mean():.4f}, Std = {scores.std():.4f}"
         )
-
-
-from typing import Callable, Any, Optional
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
-from xgboost import XGBClassifier
 
 
 def cross_validate_xgboost(
@@ -631,16 +680,6 @@ def cross_validate_xgboost(
         print(
             f"{metric.replace('_', ' ').title()}: Mean = {scores.mean():.4f}, Std = {scores.std():.4f}"
         )
-
-
-import warnings
-import sys
-import os
-from contextlib import redirect_stderr
-from typing import Callable, Any, Optional
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
-from lightgbm import LGBMClassifier
 
 
 def cross_validate_lightgbm(
@@ -733,16 +772,6 @@ def cross_validate_lightgbm(
         )
 
 
-import warnings
-import sys
-import os
-from contextlib import redirect_stderr
-from typing import Callable, Any, Optional
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
-from catboost import CatBoostClassifier
-
-
 def cross_validate_catboost(
     pipeline_function: Callable[..., Any],
     X: Any,
@@ -832,26 +861,6 @@ def cross_validate_catboost(
         )
 
 
-import warnings
-import sys
-import os
-from contextlib import redirect_stderr
-from typing import Any, Dict
-
-import numpy as np
-import pandas as pd
-
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    make_scorer,
-    precision_score,
-    recall_score,
-    f1_score,
-    fbeta_score,
-)
-
-
 def tune_logistic_regression_rs(
     X: Any,
     y: Any,
@@ -930,16 +939,6 @@ def tune_logistic_regression_rs(
     )
 
     return random_search.best_estimator_
-
-
-from sklearn.ensemble import RandomForestClassifier
-import optuna
-import warnings
-import os
-from contextlib import redirect_stderr
-from sklearn.model_selection import cross_validate, StratifiedKFold
-from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
-from sklearn.exceptions import ConvergenceWarning
 
 
 def tune_model_optuna_with_grid_rf(
@@ -1056,14 +1055,6 @@ def tune_model_optuna_with_grid_cb(
     undersample=False,
     random_state=42,
 ):
-    from catboost import CatBoostClassifier
-    import optuna
-    import warnings
-    import os
-    from contextlib import redirect_stderr
-    from sklearn.model_selection import cross_validate, StratifiedKFold
-    from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
-    from sklearn.exceptions import ConvergenceWarning
 
     def fbeta_class1(y_true, y_pred, beta=2):
         from sklearn.metrics import fbeta_score

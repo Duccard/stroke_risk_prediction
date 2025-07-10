@@ -1045,3 +1045,74 @@ def plot_roc_pr_curves(
 
     plt.tight_layout()
     plt.show()
+
+
+def plot_binary_strip_and_countplot_rate(
+    df: pd.DataFrame,
+    binary_cols: List[str],
+    hue_col: str = "stroke",
+    palette_name: str = "magma",
+) -> None:
+    palette = sns.color_palette(palette_name, n_colors=2)
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+    for i, col in enumerate(binary_cols):
+        ax = axes[0, i]
+        sns.stripplot(
+            x=col,
+            y="age",
+            data=df,
+            hue=hue_col,
+            dodge=True,
+            jitter=0.25,
+            alpha=0.7,
+            palette=palette,
+            ax=ax,
+        )
+        ax.set_title(
+            f"{col.replace('_', ' ').title()} vs Age by {hue_col.title()}", fontsize=14
+        )
+        ax.set_xlabel(col.replace("_", " ").title(), fontsize=12)
+        ax.set_ylabel("Age", fontsize=12)
+        ax.legend(title=hue_col.title(), fontsize=10, title_fontsize=11)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+    for i, col in enumerate(binary_cols):
+        ax = axes[1, i]
+        prop_df = (
+            df.groupby(col)[hue_col]
+            .mean()
+            .reset_index()
+            .rename(columns={hue_col: f"{hue_col.title()} Rate"})
+        )
+        sns.barplot(
+            x=col, y=f"{hue_col.title()} Rate", data=prop_df, palette=palette, ax=ax
+        )
+        ax.set_title(
+            f"{hue_col.title()} Rate by {col.replace('_', ' ').title()}", fontsize=14
+        )
+        ax.set_xlabel(col.replace("_", " ").title(), fontsize=12)
+        ax.set_ylabel(f"{hue_col.title()} Rate", fontsize=12)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        for p in ax.patches:
+            height = p.get_height()
+            if height > 0:
+                ax.text(
+                    p.get_x() + p.get_width() / 2.0,
+                    height + 0.005,
+                    f"{height*100:.1f}%",
+                    ha="center",
+                    fontsize=10,
+                )
+
+    plt.tight_layout()
+    plt.suptitle(
+        f"{binary_cols[0].replace('_', ' ').title()} and {binary_cols[1].replace('_', ' ').title()} Analysis\nTop: Age Stripplots by {hue_col.title()}  |  Bottom: {hue_col.title()} Rates Within Group",
+        fontsize=18,
+        weight="bold",
+        y=1.05,
+    )
+    plt.show()

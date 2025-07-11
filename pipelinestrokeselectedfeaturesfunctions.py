@@ -16,6 +16,15 @@ import matplotlib.pyplot as plt
 from imblearn.combine import SMOTETomek
 
 
+import pandas as pd
+import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.under_sampling import RandomUnderSampler
+
+
 class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
     def __init__(
         self,
@@ -47,7 +56,6 @@ class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         X_temp = X.copy()
         X_temp.columns = X_temp.columns.str.lower()
-        X_temp = X_temp[X_temp["gender"] != "Other"]
 
         X_temp["age_group"] = pd.cut(
             X_temp["age"],
@@ -66,7 +74,6 @@ class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
         X_transformed.columns = X_transformed.columns.str.lower()
-        X_transformed = X_transformed[X_transformed["gender"] != "Other"]
 
         X_transformed["age_group"] = pd.cut(
             X_transformed["age"],
@@ -106,6 +113,7 @@ class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
         return X_transformed
 
 
+# ONLY these 5 final categorical features
 categorical_final_features_selected = [
     "age_group",
     "smoking_status",
@@ -155,26 +163,6 @@ def pipeline_stroke_selected_features(estimator, undersample=True, random_state=
 
     if undersample:
         steps.append(("undersampler", RandomUnderSampler(random_state=random_state)))
-
-    steps.append(("classifier", estimator))
-    return ImbPipeline(steps)
-
-
-def pipeline_stroke_selected_features_ratio_2_to_1(
-    estimator, undersample=True, random_state=42
-):
-    steps = [
-        ("feature_engineering", CombinedFeatureTransformer()),
-        ("final_preprocessing", perfect_data_preprocessor_selected),
-    ]
-
-    if undersample:
-        steps.append(
-            (
-                "undersampler",
-                RandomUnderSampler(sampling_strategy=0.5, random_state=random_state),
-            )
-        )
 
     steps.append(("classifier", estimator))
     return ImbPipeline(steps)
@@ -244,6 +232,26 @@ def evaluate_pipeline_selected_features(
     disp.plot(cmap="magma_r")
     plt.title(f"Confusion Matrix (Test Data) - {title_suffix}", weight="bold")
     plt.show()
+
+
+def pipeline_stroke_selected_features_ratio_2_to_1(
+    estimator, undersample=True, random_state=42
+):
+    steps = [
+        ("feature_engineering", CombinedFeatureTransformer()),
+        ("final_preprocessing", perfect_data_preprocessor_selected),
+    ]
+
+    if undersample:
+        steps.append(
+            (
+                "undersampler",
+                RandomUnderSampler(sampling_strategy=0.5, random_state=random_state),
+            )
+        )
+
+    steps.append(("classifier", estimator))
+    return ImbPipeline(steps)
 
 
 def evaluate_pipeline_selected_features_ratio_2_to_1(

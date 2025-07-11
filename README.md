@@ -18,6 +18,34 @@ It’s hard to spot which patients are at high risk of stroke, making it tough t
 
 The objective is to support early identification of high-risk patients to inform healthcare interventions and reduce the burden of stroke.
 
+## Files
+
+- StrokeRiskPredictionModel.ipynb - Jupyter notebook containing the full stroke risk prediction workflow from data loading to evaluation and  model deployment.
+
+- healthcare-dataset-stroke-data.csv - CSV file with patient data and stroke labels used for training and testing.
+
+- best_catboost_pipeline.pkl - saved CatBoost model pipeline with preprocessing steps for easy reuse.
+
+- best_lr_pipeline.pkl - saved Logistic Regression pipeline including all preprocessing.
+
+- best_rf_pipeline.pkl - saved Random Forest pipeline with feature engineering and preprocessing.
+
+- stroke_risk_pipeline_ensemble_model.joblib - Ensemble model pipeline combining multiple classifiers.
+
+- pipelinestrokefunctions.py- pipeline functions containing all features
+
+- pipelinestrokeselectedfeaturesfunctions.py - contains pipeline functions for selected, engineered feature subsets.
+
+- graphscustomfunctions.py - custom plot functions
+
+- customstrokefunctions.py - custom helper functions.
+
+- README.md - project documentation and overview.
+
+- requirements.txt - info about packages and their versions.
+
+- DS_Store, __pycache__/ - system and Python cache files
+
 ## Hypotheses
 
 1. Older age increases likelyhood of stroke.
@@ -54,15 +82,40 @@ The objective is to support early identification of high-risk patients to inform
 
 - Confusion Matrix. Provides detailed breakdown of correct and incorrect predictions.
 
+## Typical High Risk Stroke Groups
+
+According to the this specific dataset the most typical people to suffer from strokes are:
+
+1. Older patients
+
+2. Patients with heart diseases*
+
+3. Patients with hypertension*
+
+4. Self-employed
+
+5. People with higher average glucose levels*
+
+6. Higher BMI patients*
+
+7. Former smokers*
+
+8. Ever married*
+
+
+**Important note:** *As people get older, they're more likely to have conditions like heart disease and hypertension, to have smoked in the past, to have been married, and to carry more weight—though BMI can drop in the very old age.
+
 ## Best Model
 
 Ensemble model was chosen as best model, was made from of three base/advanced models (LR, RF, CatBoost). On final evaluation it achieved:
 
 - F2 Score: 0.37
 
-- F1 Macro: 0.56
+- F1 Macro: 0.55
 
-- Recall(1 Class): 62
+- F1: 0.23
+
+- Recall(1 Class): 66
 
 - Precision(1 Class): 0.14
 

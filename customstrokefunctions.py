@@ -111,6 +111,15 @@ from contextlib import redirect_stderr
 from sklearn.model_selection import cross_validate, StratifiedKFold
 from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
 from sklearn.exceptions import ConvergenceWarning
+from scipy.stats import chi2_contingency, fisher_exact, shapiro, mannwhitneyu
+from sklearn.model_selection import cross_validate
+from sklearn.metrics import (
+    make_scorer,
+    f1_score,
+    recall_score,
+    precision_score,
+    fbeta_score,
+)
 
 
 def train_and_evaluate_dummy_classifier(
@@ -1184,3 +1193,57 @@ def bootstrap_diff_median_bmi(group1, group2, n_bootstrap=1000):
     lower = np.percentile(diffs, 2.5)
     upper = np.percentile(diffs, 97.5)
     return lower, upper
+
+
+def compare_smoking_groups(df, group1, group2):
+    sub_df = df[df["smoking_status"].isin([group1, group2])]
+    table = pd.crosstab(sub_df["smoking_status"], sub_df["stroke"])
+
+    print(f"\nContingency Table: {group1} vs. {group2}")
+    print(table)
+
+    chi2, p, dof, expected = chi2_contingency(table)
+    print("Expected Counts:")
+    print(expected)
+
+    if (expected < 5).any():
+        print("Low expected counts detected, using Fisher's Exact Test")
+        oddsratio, p_fisher = fisher_exact(table)
+        print(f"Fisher's Exact Test p-value: {p_fisher:.4f}")
+        print(f"Odds Ratio: {oddsratio:.2f}")
+    else:
+        print(f"Chi-square statistic: {chi2:.2f}")
+        print(f"p-value: {p:.4f}")
+
+
+def fbeta_class1(y_true, y_pred, beta=2):
+    return fbeta_score(y_true, y_pred, beta=beta, pos_label=1, zero_division=0)
+
+
+def evaluate_model_cv(estimator, X, y, cv=5, n_jobs=-1):
+    """
+    Runs cross-validation on the given estimator with predefined scoring.
+    Prints mean cross-validation scores.
+    """
+    scoring = {
+        "f1_macro": "f1_macro",
+        "f1_class_1": make_scorer(f1_score, pos_label=1, zero_division=0),
+        "f2_class_1": make_scorer(fbeta_class1),
+        "recall_class_1": make_scorer(recall_score, pos_label=1, zero_division=0),
+        "precision_class_1": make_scorer(precision_score, pos_label=1, zero_division=0),
+    }
+
+    print("\n============================")
+    print(f"Evaluating model: {estimator.__class__.__name__}")
+    print(f"Cross-validation folds: {cv}")
+    print("============================\n")
+
+    cv_results = cross_validate(
+        estimator, X, y, scoring=scoring, cv=cv, n_jobs=n_jobs, return_train_score=False
+    )
+
+    for metric in scoring.keys():
+        mean_score = cv_results["test_" + metric].mean()
+        print(f"{metric}: {mean_score:.4f}")
+
+    return cv_results

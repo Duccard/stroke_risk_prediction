@@ -1162,3 +1162,25 @@ def tune_model_optuna_with_grid_cb(
     best_pipeline.fit(X, y)
 
     return best_pipeline
+
+
+def bootstrap_diff_median_age(group1, group2, n_bootstrap=1000):
+    diffs = []
+    for _ in range(n_bootstrap):
+        sample1 = np.random.choice(group1, size=len(group1), replace=True)
+        sample2 = np.random.choice(group2, size=len(group2), replace=True)
+        diffs.append(np.median(sample2) - np.median(sample1))
+    lower = np.percentile(diffs, 2.5)
+    upper = np.percentile(diffs, 97.5)
+    return lower, upper
+
+
+def bootstrap_diff_median_bmi(group1, group2, n_bootstrap=1000):
+    diffs = []
+    for _ in range(n_bootstrap):
+        sample1 = np.random.choice(group1, size=len(group1), replace=True)
+        sample2 = np.random.choice(group2, size=len(group2), replace=True)
+        diffs.append(np.median(sample2) - np.median(sample1))
+    lower = np.percentile(diffs, 2.5)
+    upper = np.percentile(diffs, 97.5)
+    return lower, upper

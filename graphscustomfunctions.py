@@ -42,6 +42,7 @@ from typing import List, Optional, Tuple
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.inspection import permutation_importance
 
 
 def plot_numerical_boxplots(
@@ -1115,4 +1116,114 @@ def plot_binary_strip_and_countplot_rate(
         weight="bold",
         y=1.05,
     )
+    plt.show()
+
+
+def plot_permutation_importance(
+    pipeline,
+    X_val,
+    y_val,
+    scoring="roc_auc",
+    n_repeats=10,
+    random_state=42,
+    title="Permutation Importance (Grouped by Feature)",
+) -> None:
+    """
+    Computes and plots grouped permutation importances for a given pipeline.
+    It works by permuting original features from X_val.
+
+    Parameters:
+    - pipeline: The trained scikit-learn or imblearn pipeline.
+    - X_val: The validation (or test) features, in their original, untransformed format.
+    - y_val: The true labels for X_val.
+    - scoring: The metric to use for permutation importance (e.g., 'roc_auc', 'f1').
+    - n_repeats: Number of times to permute each feature.
+    - random_state: Seed for reproducibility.
+    - title: Title for the plot.
+    """
+
+    original_feature_names = X_val.columns.tolist()
+
+    print(
+        f"\nComputing permutation importance using '{scoring}' (this may take a minute with {n_repeats} repeats)..."
+    )
+    result = permutation_importance(
+        estimator=pipeline,
+        X=X_val,
+        y=y_val,
+        scoring=scoring,
+        n_repeats=n_repeats,
+        random_state=random_state,
+        n_jobs=-1,
+    )
+    print("Permutation importance complete.")
+
+    if len(original_feature_names) != len(result.importances_mean):
+        raise ValueError(
+            f"Mismatch between number of original features ({len(original_feature_names)}) "
+            f"and permutation importance results ({len(result.importances_mean)}). "
+            f"This should not happen if X is original and estimator is pipeline."
+        )
+
+    df_perm_imp = pd.DataFrame(
+        {
+            "feature": original_feature_names,
+            "importance_mean": result.importances_mean,
+            "importance_std": result.importances_std,
+        }
+    )
+
+    grouped_importance = df_perm_imp.set_index("feature").sort_values(
+        by="importance_mean", ascending=False
+    )
+
+    plt.figure(figsize=(10, 8))
+    bars = plt.barh(
+        grouped_importance.index,
+        grouped_importance["importance_mean"],
+        xerr=grouped_importance["importance_std"],
+        color=plt.cm.magma_r(np.linspace(0, 1, len(grouped_importance))),
+        alpha=0.9,
+    )
+
+    plt.xlabel(f"Mean Decrease in {scoring} (± Std Dev)", fontsize=12)
+    plt.ylabel("Original Feature", fontsize=12)
+    plt.title(title, fontsize=14, weight="bold")
+    plt.gca().invert_yaxis()
+    plt.grid(axis="x", linestyle="--", alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+    print("\n--- Grouped Permutation Importance (Mean ± Std Dev) ---")
+    print(grouped_importance)
+
+
+def plot_ever_married_stripplot(df: pd.DataFrame) -> None:
+    """
+    Creates a stripplot of Age vs Ever Married, colored by Stroke status.
+
+    Parameters:
+    - df: pandas DataFrame containing 'ever_married', 'age', and 'stroke' columns.
+    """
+    palette = sns.color_palette("magma", n_colors=2)
+
+    plt.figure(figsize=(8, 6))
+    sns.stripplot(
+        x="ever_married",
+        y="age",
+        hue="stroke",
+        data=df,
+        dodge=True,
+        jitter=0.25,
+        alpha=0.7,
+        palette=palette,
+    )
+
+    plt.title("Ever Married vs Age by Stroke Status", fontsize=14, weight="bold")
+    plt.xlabel("Ever Married", fontsize=12)
+    plt.ylabel("Age", fontsize=12)
+    plt.legend(title="Stroke", fontsize=10, title_fontsize=11, loc="upper left")
+    plt.grid(axis="y", linestyle="--", alpha=0.3)
+    plt.tight_layout()
     plt.show()

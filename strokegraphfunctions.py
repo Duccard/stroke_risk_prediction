@@ -1,22 +1,22 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-import matplotlib.lines as mlines
-from phik import phik_matrix
+# Standard Library
 import warnings
-from typing import List, Optional
-import matplotlib.lines as mlines
-import pandas as pd
+from typing import List, Optional, Tuple
+
+# Scientific / Data
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.inspection import permutation_importance
+import pandas as pd
+
+# Plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
-import pandas as pd
-from typing import Optional, Tuple
+import matplotlib.lines as mlines
+
+# Scikit-learn
+from sklearn.model_selection import train_test_split
+from sklearn.inspection import permutation_importance
+
+# Phik
+from phik import phik_matrix
 
 
 def plot_numerical_boxplots(
@@ -272,11 +272,6 @@ def plot_countplots_categorical_by_stroke(
     plt.show()
 
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import List, Optional
-
-
 def plot_stroke_rate_by_category(
     df,
     cat_cols: List[str],
@@ -468,12 +463,6 @@ def plot_stripplot_by_stroke(
         plt.legend_.remove()
 
     plt.show()
-
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from typing import List, Optional
 
 
 def plot_binary_strip_and_countplot_rate(

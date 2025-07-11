@@ -1,125 +1,52 @@
-from sklearn.metrics import precision_score, recall_score, f1_score
-import pandas as pd
+# Standard Library
+import os
+import sys
+import warnings
+from contextlib import redirect_stderr
+
+# Scientific / Data
 import numpy as np
+import pandas as pd
+from scipy.stats import chi2_contingency, fisher_exact, shapiro, mannwhitneyu
+
+# Plotting
+import matplotlib.pyplot as plt
+
+# Scikit-learn Core
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_validate, StratifiedKFold, RandomizedSearchCV
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from xgboost import XGBClassifier
-from imblearn.pipeline import Pipeline as ImbPipeline
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.under_sampling import TomekLinks
+from sklearn.dummy import DummyClassifier
+
+# Scikit-learn Metrics
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     ConfusionMatrixDisplay,
+    make_scorer,
+    precision_score,
+    recall_score,
+    f1_score,
+    fbeta_score,
 )
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.dummy import DummyClassifier
-from sklearn.metrics import precision_score, recall_score, f1_score
-from typing import Callable, Any, Optional, Union, Dict
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import precision_score, recall_score, f1_score
-from sklearn.metrics import fbeta_score
-from typing import Callable, Any, Optional, Union, Dict
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import precision_score, recall_score, f1_score
-from typing import Callable, Any, Optional, Union
-from sklearn.pipeline import Pipeline
-from catboost import CatBoostClassifier
-from sklearn.metrics import precision_score, recall_score, f1_score
-
-from typing import Callable, Any, Optional
-from sklearn.pipeline import Pipeline
-from lightgbm import LGBMClassifier
-from sklearn.metrics import precision_score, recall_score, f1_score, make_scorer
-from sklearn.metrics import precision_score, recall_score, f1_score
-from typing import Callable, Any, Optional, Union
-from sklearn.pipeline import Pipeline
-from catboost import CatBoostClassifier
-from sklearn.metrics import precision_score, recall_score, f1_score
-
-from typing import Callable, Any, Optional
-from sklearn.pipeline import Pipeline
-from lightgbm import LGBMClassifier
-from sklearn.metrics import precision_score, recall_score, f1_score
-from typing import Callable, Any, Optional
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
-from sklearn.ensemble import RandomForestClassifier
-import optuna
-import warnings
-import os
-from contextlib import redirect_stderr
-from sklearn.model_selection import cross_validate, StratifiedKFold
-from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
 from sklearn.exceptions import ConvergenceWarning
 
-import warnings
-import sys
-import os
-from contextlib import redirect_stderr
-from typing import Callable, Any, Optional
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
-from lightgbm import LGBMClassifier
-
-from typing import Callable, Any, Optional
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
+# Models
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
-
-import warnings
-import sys
-import os
-from contextlib import redirect_stderr
-from typing import Callable, Any, Optional
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score
+from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
-import warnings
-import sys
-import os
-from contextlib import redirect_stderr
-from typing import Any, Dict
 
-import numpy as np
-import pandas as pd
+# Imbalanced-Learn
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.under_sampling import RandomUnderSampler, TomekLinks
+from imblearn.combine import SMOTETomek
 
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    make_scorer,
-    precision_score,
-    recall_score,
-    f1_score,
-    fbeta_score,
-)
-from catboost import CatBoostClassifier
+# Optimization
 import optuna
-import warnings
-import os
-from contextlib import redirect_stderr
-from sklearn.model_selection import cross_validate, StratifiedKFold
-from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
-from sklearn.exceptions import ConvergenceWarning
-from scipy.stats import chi2_contingency, fisher_exact, shapiro, mannwhitneyu
-from sklearn.model_selection import cross_validate
-from sklearn.metrics import (
-    make_scorer,
-    f1_score,
-    recall_score,
-    precision_score,
-    fbeta_score,
-)
 
 
 def train_and_evaluate_dummy_classifier(

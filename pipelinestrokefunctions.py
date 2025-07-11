@@ -1,23 +1,29 @@
-import pandas as pd
+# Scientific / Data
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Scikit-learn Core
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.utils import resample
-from xgboost import XGBClassifier
-from imblearn.pipeline import Pipeline
-from imblearn.under_sampling import RandomUnderSampler
-from sklearn.metrics import classification_report
-from sklearn.pipeline import Pipeline
-from imblearn.pipeline import Pipeline as ImbPipeline
-from imblearn.under_sampling import RandomUnderSampler
+
+# Scikit-learn Metrics
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     ConfusionMatrixDisplay,
 )
-import matplotlib.pyplot as plt
+
+# Models
+from xgboost import XGBClassifier
+
+# Imbalanced-Learn
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.under_sampling import RandomUnderSampler
+
 
 age_bins = [0, 18, 39, 59, 64, 120]
 age_labels = ["Under 18", "Young Adult", "Middle-Aged Adult", "Senior Adult", "Elderly"]

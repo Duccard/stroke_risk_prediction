@@ -1,48 +1,32 @@
-import pandas as pd
+# Standard Library
+import warnings
+from typing import List, Optional, Tuple, Sequence, Union
+
+# Scientific / Data
 import numpy as np
+import pandas as pd
+
+# Plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.lines as mlines
+
+# Scikit-learn
 from sklearn.model_selection import train_test_split
-import matplotlib.lines as mlines
-from phik import phik_matrix
-import warnings
-from typing import List, Optional
-import matplotlib.lines as mlines
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.metrics import f1_score, fbeta_score, precision_score, recall_score
-from typing import Sequence
-import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.metrics import (
+    f1_score,
+    fbeta_score,
+    precision_score,
+    recall_score,
     roc_curve,
     roc_auc_score,
     precision_recall_curve,
     average_precision_score,
 )
-from typing import Union
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import List, Optional
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from typing import List, Optional
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import pandas as pd
-from typing import Optional, Tuple
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Optional, Tuple, List
-from typing import List, Optional, Tuple
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.inspection import permutation_importance
+
+# Phik (for correlation)
+from phik import phik_matrix
 
 
 def plot_numerical_boxplots(

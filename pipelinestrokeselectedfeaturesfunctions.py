@@ -1,28 +1,40 @@
-import pandas as pd
+# Standard Library
+import os
+import warnings
+from contextlib import redirect_stderr
+
+# Scientific / Data
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Scikit-learn Core
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from xgboost import XGBClassifier
-from imblearn.pipeline import Pipeline as ImbPipeline
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.under_sampling import TomekLinks
+from sklearn.model_selection import cross_validate, StratifiedKFold
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     ConfusionMatrixDisplay,
+    make_scorer,
+    f1_score,
+    recall_score,
+    precision_score,
 )
-import matplotlib.pyplot as plt
+from sklearn.exceptions import ConvergenceWarning
+
+# Models
+from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
+
+# Imbalanced-Learn
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTETomek
 
-
-import pandas as pd
-import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from imblearn.pipeline import Pipeline as ImbPipeline
-from imblearn.under_sampling import RandomUnderSampler
+# Optimization
+import optuna
 
 
 class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
@@ -113,7 +125,6 @@ class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
         return X_transformed
 
 
-# ONLY these 5 final categorical features
 categorical_final_features_selected = [
     "age_group",
     "smoking_status",
@@ -344,14 +355,6 @@ def tune_model_optuna_with_grid_cb(
     undersample=False,
     random_state=42,
 ):
-    from catboost import CatBoostClassifier
-    import optuna
-    import warnings
-    import os
-    from contextlib import redirect_stderr
-    from sklearn.model_selection import cross_validate, StratifiedKFold
-    from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
-    from sklearn.exceptions import ConvergenceWarning
 
     def fbeta_class1(y_true, y_pred, beta=2):
         from sklearn.metrics import fbeta_score

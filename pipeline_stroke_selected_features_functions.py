@@ -1,19 +1,40 @@
-import pandas as pd
+# Standard Library
+import os
+import warnings
+from contextlib import redirect_stderr
+
+# Scientific / Data
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Scikit-learn Core
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from xgboost import XGBClassifier
-from imblearn.pipeline import Pipeline as ImbPipeline
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.under_sampling import TomekLinks
+from sklearn.model_selection import cross_validate, StratifiedKFold
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     ConfusionMatrixDisplay,
+    make_scorer,
+    f1_score,
+    recall_score,
+    precision_score,
 )
-import matplotlib.pyplot as plt
+from sklearn.exceptions import ConvergenceWarning
+
+# Models
+from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
+
+# Imbalanced-Learn
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTETomek
+
+# Optimization
+import optuna
 
 
 class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
@@ -47,7 +68,6 @@ class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         X_temp = X.copy()
         X_temp.columns = X_temp.columns.str.lower()
-        X_temp = X_temp[X_temp["gender"] != "Other"]
 
         X_temp["age_group"] = pd.cut(
             X_temp["age"],
@@ -66,7 +86,6 @@ class CombinedFeatureTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
         X_transformed.columns = X_transformed.columns.str.lower()
-        X_transformed = X_transformed[X_transformed["gender"] != "Other"]
 
         X_transformed["age_group"] = pd.cut(
             X_transformed["age"],
@@ -226,6 +245,66 @@ def evaluate_pipeline_selected_features(
     plt.show()
 
 
+def pipeline_stroke_selected_features_ratio_2_to_1(
+    estimator, undersample=True, random_state=42
+):
+    steps = [
+        ("feature_engineering", CombinedFeatureTransformer()),
+        ("final_preprocessing", perfect_data_preprocessor_selected),
+    ]
+
+    if undersample:
+        steps.append(
+            (
+                "undersampler",
+                RandomUnderSampler(sampling_strategy=0.5, random_state=random_state),
+            )
+        )
+
+    steps.append(("classifier", estimator))
+    return ImbPipeline(steps)
+
+
+def evaluate_pipeline_selected_features_ratio_2_to_1(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    undersample=False,
+    use_weights=False,
+    title_suffix="",
+):
+    if use_weights:
+        pos_weight = y_train.value_counts()[0] / y_train.value_counts()[1]
+        estimator = XGBClassifier(
+            random_state=42, eval_metric="logloss", scale_pos_weight=pos_weight
+        )
+    else:
+        estimator = XGBClassifier(random_state=42, eval_metric="logloss")
+
+    xgb_pipeline = pipeline_stroke_selected_features_ratio_2_to_1(
+        estimator=estimator, undersample=undersample
+    )
+
+    print(f"\nTraining Pipeline (Undersample={undersample}, Weights={use_weights})...")
+    xgb_pipeline.fit(X_train, y_train)
+    print("Pipeline fitted successfully.")
+
+    y_train_pred = xgb_pipeline.predict(X_train)
+    print("\n--- Classification Report on Training Data ---")
+    print(classification_report(y_train, y_train_pred))
+
+    y_test_pred = xgb_pipeline.predict(X_test)
+    print("\n--- Classification Report on Test Data ---")
+    print(classification_report(y_test, y_test_pred))
+
+    cm = confusion_matrix(y_test, y_test_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot(cmap="magma_r")
+    plt.title(f"Confusion Matrix (Test Data) - {title_suffix}", weight="bold")
+    plt.show()
+
+
 def evaluate_pipeline_selected_features_smotetomek(
     X_train,
     y_train,
@@ -264,3 +343,122 @@ def evaluate_pipeline_selected_features_smotetomek(
     disp.plot(cmap="magma_r")
     plt.title(f"Confusion Matrix (Test Data) - {title_suffix}", weight="bold")
     plt.show()
+
+
+def tune_model_optuna_with_grid_cb(
+    X,
+    y,
+    pipeline_function,
+    param_distributions,
+    n_trials=30,
+    cv_folds=5,
+    undersample=False,
+    random_state=42,
+):
+
+    def fbeta_class1(y_true, y_pred, beta=2):
+        from sklearn.metrics import fbeta_score
+
+        return fbeta_score(y_true, y_pred, beta=beta, pos_label=1, zero_division=0)
+
+    def objective(trial):
+        hyperparams = {}
+
+        bootstrap_type = trial.suggest_categorical(
+            "bootstrap_type", param_distributions["bootstrap_type"]
+        )
+        hyperparams["bootstrap_type"] = bootstrap_type
+
+        if bootstrap_type == "Bernoulli":
+            subsample_range = param_distributions.get("subsample", [0.5, 0.9])
+            hyperparams["subsample"] = trial.suggest_float(
+                "subsample", min(subsample_range), max(subsample_range)
+            )
+
+        for param, values in param_distributions.items():
+            if param in ["bootstrap_type", "subsample"]:
+                continue
+            if isinstance(values[0], float):
+                low, high = min(values), max(values)
+                hyperparams[param] = trial.suggest_float(param, low, high)
+            elif isinstance(values[0], int):
+                low, high = min(values), max(values)
+                hyperparams[param] = trial.suggest_int(param, low, high)
+            else:
+                hyperparams[param] = trial.suggest_categorical(param, values)
+
+        hyperparams["random_state"] = random_state
+        hyperparams["verbose"] = 0
+
+        estimator = CatBoostClassifier(**hyperparams)
+
+        pipeline = pipeline_function(
+            estimator=estimator, undersample=undersample, random_state=random_state
+        )
+
+        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
+
+        scoring = {
+            "f1_macro": make_scorer(f1_score, average="macro", zero_division=0),
+            "f1_class_1": make_scorer(f1_score, pos_label=1, zero_division=0),
+            "f2_class_1": make_scorer(fbeta_class1),
+            "recall_class_1": make_scorer(recall_score, zero_division=0),
+            "precision_class_1": make_scorer(precision_score, zero_division=0),
+        }
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            with open(os.devnull, "w") as devnull, redirect_stderr(devnull):
+                scores = cross_validate(
+                    pipeline,
+                    X,
+                    y,
+                    scoring=scoring,
+                    cv=cv,
+                    n_jobs=-1,
+                    return_train_score=False,
+                )
+
+        mean_f1 = scores["test_f1_macro"].mean()
+
+        trial.set_user_attr("f1_class_1", scores["test_f1_class_1"].mean())
+        trial.set_user_attr("f2_class_1", scores["test_f2_class_1"].mean())
+        trial.set_user_attr("recall_class_1", scores["test_recall_class_1"].mean())
+        trial.set_user_attr(
+            "precision_class_1", scores["test_precision_class_1"].mean()
+        )
+
+        return 1.0 - mean_f1
+
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=random_state)
+    )
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+
+    print("\nOptuna optimization complete.")
+    print(f"Best trial: {study.best_trial.number}")
+    print(f"Best F1 Macro Score: {1.0 - study.best_value:.4f}")
+    print("Best hyperparameters:")
+    for k, v in study.best_trial.params.items():
+        print(f"  {k}: {v}")
+
+    print("\nOther metrics on best trial:")
+    print(f"F1 Class 1: {study.best_trial.user_attrs['f1_class_1']:.4f}")
+    print(f"F2 Class 1: {study.best_trial.user_attrs['f2_class_1']:.4f}")
+    print(f"Recall (Class 1): {study.best_trial.user_attrs['recall_class_1']:.4f}")
+    print(
+        f"Precision (Class 1): {study.best_trial.user_attrs['precision_class_1']:.4f}"
+    )
+
+    best_params = study.best_trial.params
+    best_params["random_state"] = random_state
+    best_params["verbose"] = 0
+    best_estimator = CatBoostClassifier(**best_params)
+
+    best_pipeline = pipeline_function(
+        estimator=best_estimator, undersample=undersample, random_state=random_state
+    )
+    best_pipeline.fit(X, y)
+
+    return best_pipeline

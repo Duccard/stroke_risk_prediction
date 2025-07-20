@@ -3,6 +3,8 @@ import os
 import sys
 import warnings
 from contextlib import redirect_stderr
+from typing import Callable, Any, Optional, Union, Dict
+
 
 # Scientific / Data
 import numpy as np

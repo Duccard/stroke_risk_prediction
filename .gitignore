@@ -1,0 +1,22 @@
+# macOS system files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Model artifacts
+*.pkl
+*.joblib
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode settings
+.vscode/
+
+# Logs or runtime files
+*.log
+
+# CatBoost logs/info 
+catboost_info/

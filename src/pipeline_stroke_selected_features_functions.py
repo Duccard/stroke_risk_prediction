@@ -208,8 +208,8 @@ import matplotlib.pyplot as plt
 def evaluate_pipeline_selected_features(
     X_train,
     y_train,
-    X_test,
-    y_test,
+    X_val,
+    y_val,
     undersample=False,
     use_weights=False,
     title_suffix="",
@@ -234,14 +234,14 @@ def evaluate_pipeline_selected_features(
     print("\n--- Classification Report on Training Data ---")
     print(classification_report(y_train, y_train_pred))
 
-    y_test_pred = xgb_pipeline.predict(X_test)
-    print("\n--- Classification Report on Test Data ---")
-    print(classification_report(y_test, y_test_pred))
+    y_test_pred = xgb_pipeline.predict(X_val)
+    print("\n--- Classification Report on Validation Data ---")
+    print(classification_report(y_val, y_test_pred))
 
-    cm = confusion_matrix(y_test, y_test_pred)
+    cm = confusion_matrix(y_val, y_test_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot(cmap="magma_r")
-    plt.title(f"Confusion Matrix (Test Data) - {title_suffix}", weight="bold")
+    plt.title(f"Confusion Matrix (Validation Data) - {title_suffix}", weight="bold")
     plt.show()
 
 
@@ -308,8 +308,8 @@ def evaluate_pipeline_selected_features_ratio_2_to_1(
 def evaluate_pipeline_selected_features_smotetomek(
     X_train,
     y_train,
-    X_test,
-    y_test,
+    X_val,
+    y_val,
     undersample=False,
     use_weights=False,
     title_suffix="",
@@ -334,14 +334,14 @@ def evaluate_pipeline_selected_features_smotetomek(
     print("\n--- Classification Report on Training Data ---")
     print(classification_report(y_train, y_train_pred))
 
-    y_test_pred = xgb_pipeline.predict(X_test)
-    print("\n--- Classification Report on Test Data ---")
-    print(classification_report(y_test, y_test_pred))
+    y_test_pred = xgb_pipeline.predict(X_val)
+    print("\n--- Classification Report on Validation Data ---")
+    print(classification_report(y_val, y_test_pred))
 
-    cm = confusion_matrix(y_test, y_test_pred)
+    cm = confusion_matrix(y_val, y_test_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot(cmap="magma_r")
-    plt.title(f"Confusion Matrix (Test Data) - {title_suffix}", weight="bold")
+    plt.title(f"Confusion Matrix (Validation Data) - {title_suffix}", weight="bold")
     plt.show()
 
 
